@@ -1,0 +1,6 @@
+lancedb==0.18.0
+numpy==2.0.2
+pandas==2.2.3
+ranx==0.3.20
+requests==2.32.2
+sentence-transformers==3.3.1
