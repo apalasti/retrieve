@@ -1,6 +1,5 @@
 import math
 from pathlib import Path
-from typing import Dict
 
 import ranx
 import pandas as pd
@@ -11,6 +10,7 @@ from sentence_transformers import SentenceTransformer
 
 ROOT_DIR = Path(__file__).parent.parent
 CORPUS_PATH = ROOT_DIR / "data/msmarco/test_corpus.jsonl"
+WORD_LIMIT_PER_PASSAGE = 100
 CUTOFF = 100
 
 
@@ -35,9 +35,18 @@ def file_len(fpath):
         return sum(1 for _ in f)
 
 
-def calculate_embeddings(model: SentenceTransformer, batch: pd.DataFrame):
-    inputs = batch["text"].astype("str").to_list()
-    batch["embedding"] = list(model.encode(inputs, normalize_embeddings=True))
+def calculate_embeddings(model: SentenceTransformer, batch: pd.DataFrame, limit=-1):
+    def chunk_text(text: str):
+        words = text.split()
+        return [" ".join(words[i : i + limit]) for i in range(0, len(words), limit)]
+
+    if 0 < limit:
+        batch["text"] = batch["text"].apply(chunk_text)
+        batch = batch.explode("text")
+
+    batch["embedding"] = list(
+        model.encode(batch["text"].values, batch_size=100, normalize_embeddings=True)
+    )
     return batch
 
 
@@ -45,6 +54,7 @@ def main():
     print("Loading embedding model...")
     model = SentenceTransformer(
         "sentence-transformers/all-MiniLM-L6-v2",
+        model_kwargs={"torch_dtype": "float16"}
     )
 
     print("Loading database...")
@@ -55,13 +65,17 @@ def main():
 
     # If db is empty then load the corpus
     if 0 == db.count_rows():
-        batch_size = 512
-        num_batches = math.ceil(file_len(CORPUS_PATH) / batch_size)
+        num_batches = math.ceil(file_len(CORPUS_PATH) / 10_000)
         batch_generator = (
-            calculate_embeddings(model, batch.rename(columns={"_id": "id"}))
-            for batch in pd.read_json(CORPUS_PATH, lines=True, chunksize=batch_size)
+            calculate_embeddings(
+                model, batch.rename(columns={"_id": "id"}), limit=WORD_LIMIT_PER_PASSAGE
+            )
+            for batch in pd.read_json(CORPUS_PATH, lines=True, chunksize=10_000)
         )
         db.add(tqdm(batch_generator, desc="Loading corpus...", total=num_batches))
+
+        print("Optimizing table")
+        db.table.optimize()
     else:
         print("Corpus already loaded!")
 

@@ -9,7 +9,7 @@ ROOT_DIR = Path(__file__).parent.parent
 
 
 def download_gh_folder(
-    owner: str, repo: str, path: str, destination: str | Path, branch: str = "main"
+    owner: str, repo: str, path: str, destination: str, branch: str = "main"
 ):
     destination = Path(destination)
     destination.mkdir(exist_ok=True, parents=True)
@@ -39,7 +39,7 @@ def download_gh_folder(
             )
 
 
-def download_msmarco(destination: str | Path):
+def download_msmarco(destination: str):
     destination_path = Path(destination)
     destination_path.mkdir(parents=True, exist_ok=True)
 

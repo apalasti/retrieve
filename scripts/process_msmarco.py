@@ -12,7 +12,7 @@ DATASET = "test"
 
 
 def msmarco_searched_documents(
-    location: Path | str, dataset: Literal["train", "test", "dev"]
+    location: str, dataset: Literal["train", "test", "dev"]
 ):
     location = Path(location)
     df = pd.read_csv(location / f"{dataset}.tsv", sep="\t")
