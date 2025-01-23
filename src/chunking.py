@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union, Iterator
+from typing import Any, Dict, Iterator, List, Optional, Union
 
-import orjson
 import numpy as np
+import orjson
 import tiktoken
+
 from src.documents import Document
 
 
@@ -80,7 +81,12 @@ class FixedTokenChunker(Chunker):
                     },
                 )
             )
-            start_char_idx += len(chunk_text)
+
+            non_overlapping = self.tokenizer.decode(
+                token_ids[start : self.max_tokens - self.overlap]
+            )
+            start_char_idx += len(non_overlapping)
+
         return chunks
 
 

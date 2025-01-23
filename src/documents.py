@@ -1,9 +1,9 @@
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, Generator, Optional
 
-import uuid
 from tqdm import tqdm
 
 
