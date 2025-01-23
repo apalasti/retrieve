@@ -39,7 +39,7 @@ class FileDocument(Document):
 
     def read(self):
         if self.text is None:
-            with open(self.metadata["full_path"], "r") as f:
+            with open(self.metadata["full_path"], "r", errors='ignore') as f:
                 self.text = f.read()
         return self.text
 
@@ -82,7 +82,7 @@ class DirectoryReader(DocumentReader):
         return [
             str(f)
             for f in file_iterator
-            if f.is_file() and (not self.ignore_hidden or not f.name.startswith("."))
+            if f.is_file() and (not any(part.startswith(".") for part in f.parts))
         ]
 
     def num_documents(self):
