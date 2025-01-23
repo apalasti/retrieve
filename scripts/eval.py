@@ -1,11 +1,14 @@
-import math
 from pathlib import Path
 
 import ranx
 import pandas as pd
 from tqdm import tqdm
+
 from src.vector_db import VectorDB
-from sentence_transformers import SentenceTransformer
+from src.embedding import STEmbedding
+from src.chunking import FixedTokenChunker
+from src.documents import JsonLReader
+from src.pipeline import make_pipeline
 
 
 ROOT_DIR = Path(__file__).parent.parent
@@ -35,47 +38,37 @@ def file_len(fpath):
         return sum(1 for _ in f)
 
 
-def calculate_embeddings(model: SentenceTransformer, batch: pd.DataFrame, limit=-1):
-    def chunk_text(text: str):
-        words = text.split()
-        return [" ".join(words[i : i + limit]) for i in range(0, len(words), limit)]
-
-    if 0 < limit:
-        batch["text"] = batch["text"].apply(chunk_text)
-        batch = batch.explode("text")
-
-    batch["embedding"] = list(
-        model.encode(batch["text"].values, batch_size=100, normalize_embeddings=True)
-    )
-    return batch
-
-
 def main():
     print("Loading embedding model...")
-    model = SentenceTransformer(
+    embedder = STEmbedding(
         "sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"torch_dtype": "float16"}
+        model_kwargs={"torch_dtype": "float16"},
     )
 
     print("Loading database...")
     db = VectorDB(
         ROOT_DIR / "data/msmarco/msmarco.db",
-        model.get_sentence_embedding_dimension(),
+        embedder.get_embedding_dims(),
     )
 
     # If db is empty then load the corpus
-    if 0 == db.count_rows():
-        num_batches = math.ceil(file_len(CORPUS_PATH) / 10_000)
-        batch_generator = (
-            calculate_embeddings(
-                model, batch.rename(columns={"_id": "id"}), limit=WORD_LIMIT_PER_PASSAGE
-            )
-            for batch in pd.read_json(CORPUS_PATH, lines=True, chunksize=10_000)
+    if 0 == db.num_chunks():
+        corpus_reader = JsonLReader(
+            CORPUS_PATH,
+            lambda record: {
+                "id": record["_id"],
+                "text": record["text"],
+                "size": len(record["text"]),
+            },
         )
-        db.add(tqdm(batch_generator, desc="Loading corpus...", total=num_batches))
+        pipeline = make_pipeline(FixedTokenChunker(max_tokens=100, overlap=0), embedder)
+        for processed_batch in pipeline.run(
+            tqdm(corpus_reader.iter_documents(), total=corpus_reader.num_documents())
+        ):
+            db.add_chunks(processed_batch)
 
         print("Optimizing table")
-        db.table.optimize()
+        db.chunks_table.optimize()
     else:
         print("Corpus already loaded!")
 
@@ -86,7 +79,7 @@ def main():
     queries = queries.set_index("_id", drop=False).rename(columns={"_id": "id"})
     queries = queries.loc[qd_pairs.index.unique()]
     queries["text"] = queries["text"].astype("str")
-    queries = calculate_embeddings(model, queries)
+    queries["embedding"] = embedder.embed_texts(queries["text"].values)
 
     search_methods = [BM25Search(), VectorSearch()]
 
