@@ -15,6 +15,9 @@ class Chunk:
     embedding: Optional[np.ndarray] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+    def read(self):
+        return self.text
+
     def to_dict(self) -> Dict:
         return {
             "doc_id": self.doc_id,
@@ -49,16 +52,16 @@ class FixedTokenChunker(Chunker):
         self.overlap = overlap
 
     def chunk_text(self, piece: Union[Document, Chunk]):
-        text = piece.text
+        text = piece.read()
         if isinstance(piece, Document):
             doc_id = piece.id
-            metadata = {}
+            metadata = piece.metadata
         else:
             doc_id = piece.doc_id
             metadata = piece.metadata
 
         chunks: List[Chunk] = []
-        token_ids = self.tokenizer.encode(text)
+        token_ids = self.tokenizer.encode(text, disallowed_special=())
 
         start_char_idx = metadata.get("start_char_idx", 0)
         for start in range(0, len(token_ids), self.max_tokens - self.overlap):
@@ -77,6 +80,7 @@ class FixedTokenChunker(Chunker):
                     },
                 )
             )
+            start_char_idx += len(chunk_text)
         return chunks
 
 
