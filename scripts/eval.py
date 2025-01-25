@@ -8,7 +8,7 @@ from src.vector_db import VectorDB
 from src.embedding import STEmbedding
 from src.chunking import FixedTokenChunker
 from src.documents import JsonLReader
-from src.pipeline import make_pipeline
+from src.indexer import Indexer
 
 
 ROOT_DIR = Path(__file__).parent.parent
@@ -61,14 +61,10 @@ def main():
                 "size": len(record["text"]),
             },
         )
-        pipeline = make_pipeline(FixedTokenChunker(max_tokens=100, overlap=0), embedder)
-        for processed_batch in pipeline.run(
-            tqdm(corpus_reader.iter_documents(), total=corpus_reader.num_documents())
-        ):
-            db.add_chunks(processed_batch)
-
-        print("Optimizing table")
-        db.chunks_table.optimize()
+        indexer = Indexer(
+            db, transformations=[FixedTokenChunker(max_tokens=100, overlap=0), embedder]
+        )
+        indexer.process_reader(corpus_reader)
     else:
         print("Corpus already loaded!")
 
