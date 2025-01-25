@@ -18,7 +18,19 @@ class Document:
             self.id = str(uuid.uuid4())
 
     def read(self) -> str:
-        raise NotImplementedError()
+        return self.text
+
+    def hash(self) -> str:
+        return f"{self.id}:{self.read()}"
+
+    def __repr__(self) -> str:
+        max_length = 30
+        truncated_text = (
+            (self.text[:max_length] + "...")
+            if self.text is not None and len(self.text) > max_length
+            else self.text
+        )
+        return f"{self.__class__.__name__}(id={self.id}, text='{truncated_text}', metadata={self.metadata})"
 
 
 class FileDocument(Document):
@@ -35,13 +47,16 @@ class FileDocument(Document):
             "size": stats.st_size,
         }
 
-        super().__init__(id=None, metadata=metadata, text=None)
+        super().__init__(id=str(fpath), metadata=metadata, text=None)
 
     def read(self):
         if self.text is None:
             with open(self.metadata["full_path"], "r", errors='ignore') as f:
                 self.text = f.read()
         return self.text
+
+    def hash(self):
+        return f"{self.metadata['full_path']}:{self.metadata['modified_time']}"
 
 
 class DocumentReader(ABC):
@@ -51,17 +66,11 @@ class DocumentReader(ABC):
     def iter_documents(self) -> Generator[Document, Any, None]:
         raise NotImplementedError()
 
+    def load_documents(self):
+        return list(self.iter_documents())
+
     def num_documents(self) -> int:
         return sum(1 for _ in self.iter_documents())
-
-    def __call__(self, show_progress=False):
-        if show_progress:
-            return tqdm(
-                self.iter_documents(),
-                desc="Processing documents",
-                total=self.num_documents(),
-            )
-        return self.iter_documents()
 
 
 class DirectoryReader(DocumentReader):
