@@ -83,7 +83,7 @@ class FixedTokenChunker(Chunker):
             )
 
             non_overlapping = self.tokenizer.decode(
-                token_ids[start : self.max_tokens - self.overlap]
+                token_ids[start : start + self.max_tokens - self.overlap]
             )
             start_char_idx += len(non_overlapping)
 
@@ -91,11 +91,13 @@ class FixedTokenChunker(Chunker):
 
 
 if __name__ == "__main__":
+    text = """
+This is the text to perform chunking on.
+
+Firstly based on the number of tokens.
+"""
+
     chunker = FixedTokenChunker("cl100k_base", max_tokens=5, overlap=0)
-    chunks = chunker.chunk_text(
-        Chunk(
-            doc_id=1,
-            text="This is a text that should be split on every five tokens accordingly to the xxx tokenizer."
-        )
-    )
+    chunks = chunker.chunk_text(Chunk(doc_id=1, text=text))
     print(chunks)
+    print([len(chunk.text) for chunk in chunks])
