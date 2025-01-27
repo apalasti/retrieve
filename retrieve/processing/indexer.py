@@ -21,19 +21,25 @@ def _make_pipeline(
 
 
 class Indexer:
-    def __init__(self, vector_store: VectorDB, transformations: List[Callable]) -> None:
+    def __init__(self, vector_store: VectorDB, transformations: List[Callable], cache=True) -> None:
         self._vector_store = vector_store
         self._pipeline = _make_pipeline(*transformations)
+        self.cache = cache
 
     def process_documents(self, documents: List[Document], show_progress=False):
+        if self.cache:
+            iterator = self._filter_cached(documents)
+        else:
+            iterator = documents
+
         if show_progress:
             with tqdm(
-                documents, desc="Processing documents", total=len(documents)
+                iterator, desc="Processing documents", total=len(documents)
             ) as pbar:
-                for chunks in self._pipeline(self._filter_cached(pbar)):
+                for chunks in self._pipeline(pbar):
                     self._vector_store.add_chunks(chunks)
         else:
-            for chunks in self._pipeline(self._filter_cached(documents)):
+            for chunks in self._pipeline(iterator):
                 self._vector_store.add_chunks(chunks)
 
         start = time.perf_counter_ns()
@@ -42,16 +48,21 @@ class Indexer:
         logger.info(f"Optimizing table, took: {(end-start)* 1e-9:.4f} seconds")
 
     def process_reader(self, reader: DocumentReader, show_progress=False):
+        if self.cache:
+            iterator = self._filter_cached(reader.iter_documents())
+        else:
+            iterator = reader.iter_documents()
+
         if show_progress:
             with tqdm(
-                reader.iter_documents(),
+                iterator,
                 desc="Processing documents",
                 total=reader.num_documents(),
             ) as pbar:
-                for chunks in self._pipeline(self._filter_cached(pbar)):
+                for chunks in self._pipeline(pbar):
                     self._vector_store.add_chunks(chunks)
         else:
-            for chunks in self._pipeline(self._filter_cached(reader.iter_documents())):
+            for chunks in self._pipeline(iterator):
                 self._vector_store.add_chunks(chunks)
 
         start = time.perf_counter_ns()
