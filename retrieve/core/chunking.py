@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import orjson
 import tiktoken
 
-from src.documents import Document
+from .documents import Document
 
 
 @dataclass
@@ -26,6 +26,45 @@ class Chunk:
             "embedding": self.embedding,
             "metadata": orjson.dumps(self.metadata),
         }
+
+    @classmethod
+    def from_dict(cls, d: Dict):
+        return cls(
+            doc_id=d["doc_id"],
+            text=d["text"],
+            embedding=d["embedding"],
+            metadata=orjson.loads(d["metadata"]),
+        )
+
+    @staticmethod
+    def merge_chunks(*chunks: "Chunk") -> List["Chunk"]:
+
+        def clone_chunk(chunk: Chunk):
+            return Chunk(
+                doc_id=chunk.doc_id,
+                text=chunk.text,
+                embedding=chunk.embedding,
+                metadata=dict(**chunk.metadata),
+            )
+
+        chunks = sorted(
+            chunks, key=lambda chunk: (chunk.doc_id, chunk.metadata["start_char_idx"])
+        )
+        merged = [clone_chunk(chunks[0])]
+        for chunk in chunks:
+            overlaps = (
+                merged[-1].metadata["end_char_idx"] - chunk.metadata["start_char_idx"]
+            )
+            if merged[-1].doc_id == chunk.doc_id and 0 <= overlaps:
+                merged[-1].text += chunk.text[overlaps:]
+                merged[-1].metadata["end_char_idx"] += len(chunk.text) - overlaps
+            else:
+                merged.append(clone_chunk(chunk))
+        return merged
+
+    def __repr__(self):
+        text = self.text[:20] + "..." if 20 < len(self.text) else self.text
+        return f"Chunk(doc_id='{self.doc_id}', text='{text}', metadata={self.metadata})"
 
 
 class Chunker(ABC):
@@ -101,3 +140,9 @@ Firstly based on the number of tokens.
     chunks = chunker.chunk_text(Chunk(doc_id=1, text=text))
     print(chunks)
     print([len(chunk.text) for chunk in chunks])
+
+    merged = Chunk.merge_chunks(
+        Chunk(doc_id=0, text="This is a chunk", metadata={"start_char_idx": 0, "end_char_idx": 15}),
+        Chunk(doc_id=0, text="is a chunk continuation", metadata={"start_char_idx": 5, "end_char_idx": 28}),
+    )
+    print(merged)

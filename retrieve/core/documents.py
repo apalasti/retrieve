@@ -4,8 +4,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, Generator, Optional
 
-from tqdm import tqdm
-
 
 @dataclass
 class Document:

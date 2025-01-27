@@ -5,7 +5,7 @@ from watchdog.events import (FileCreatedEvent, FileDeletedEvent,
                              PatternMatchingEventHandler)
 from watchdog.observers import Observer
 
-from .documents import Document, FileDocument
+from ..core import Document, FileDocument
 from .indexer import Indexer
 
 

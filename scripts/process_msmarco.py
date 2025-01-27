@@ -1,10 +1,9 @@
-from typing import Literal
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-
 
 ROOT_DIR = Path(__file__).parent.parent
 NUM_DOCUMENTS = 1_000_000

@@ -1,19 +1,14 @@
 from pathlib import Path
 
-import ranx
 import pandas as pd
+import ranx
 from tqdm import tqdm
 
-from src.vector_db import VectorDB
-from src.embedding import STEmbedding
-from src.chunking import FixedTokenChunker
-from src.documents import JsonLReader
-from src.indexer import Indexer
-
+from retrieve.core import FixedTokenChunker, JsonLReader, STEmbedding, VectorDB
+from retrieve.processing import Indexer
 
 ROOT_DIR = Path(__file__).parent.parent
 CORPUS_PATH = ROOT_DIR / "data/msmarco/test_corpus.jsonl"
-WORD_LIMIT_PER_PASSAGE = 100
 CUTOFF = 100
 
 

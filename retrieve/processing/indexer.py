@@ -1,13 +1,10 @@
-import time
 import logging
-from typing import Callable, List, Iterator
+import time
+from typing import Callable, Iterator, List
 
 from tqdm import tqdm
 
-from .vector_db import VectorDB
-from .documents import Document, DocumentReader
-from .chunking import Chunk
-
+from ..core import Chunk, Document, DocumentReader, VectorDB
 
 logger = logging.getLogger(__name__)
 

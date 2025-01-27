@@ -3,7 +3,7 @@ from typing import Iterator, List
 
 import numpy as np
 
-from src.chunking import Chunk
+from .chunking import Chunk
 
 
 def make_batches(iterator: Iterator, batch_size: int):

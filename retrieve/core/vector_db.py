@@ -6,8 +6,8 @@ import orjson
 import pandas as pd
 import pyarrow as pa
 
-from src.chunking import Chunk
-from src.documents import Document
+from .chunking import Chunk
+from .documents import Document
 
 CHUNKS_TABLE = "chunks"
 DOCUMENTS_TABLE = "documents"
