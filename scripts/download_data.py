@@ -9,8 +9,15 @@ ROOT_DIR = Path(__file__).parent.parent
 
 
 def download_gh_folder(
-    owner: str, repo: str, path: str, destination: str, branch: str = "main"
+    owner: str,
+    repo: str,
+    path: str,
+    destination: str,
+    branch: str = "main",
+    exclude=None,
 ):
+    exclude = [] if exclude is None else exclude
+
     destination = Path(destination)
     destination.mkdir(exist_ok=True, parents=True)
 
@@ -20,7 +27,7 @@ def download_gh_folder(
 
     contents = response.json()
     for item in contents:
-        if item["type"] == "file":
+        if item["type"] == "file" and item["name"] not in exclude:
             file_url = item["download_url"]
             file_name = item["name"]
 
@@ -31,11 +38,16 @@ def download_gh_folder(
             with open(file_path, "wb") as f:
                 f.write(file_response.content)
             yield (file_path, item["path"])
-        elif item["type"] == "dir":
+        elif item["type"] == "dir" and item["name"] not in exclude:
             subfolder = destination / str(item["name"])
             subfolder.mkdir(exist_ok=True)
             yield from download_gh_folder(
-                owner, repo, f"{path}/{item['name']}", subfolder, branch
+                owner,
+                repo,
+                f"{path}/{item['name']}",
+                subfolder,
+                branch,
+                exclude=exclude,
             )
 
 
@@ -67,33 +79,46 @@ def download_msmarco(destination: str):
 
 def main():
     files = download_gh_folder(
-      "bmeviauac01",
-      "datadriven",
-      "/docs/en/lecture-notes",
-      ROOT_DIR / "data/datadriven",
-      branch="master",
+        "bmeviauac01",
+        "datadriven",
+        "/docs/en/lecture-notes",
+        ROOT_DIR / "data/datadriven",
+        branch="master",
     )
 
     questions = []
     for file_path, gh_path in (
-      t := tqdm(files, desc=f"Downloading files", unit="file")
+        t := tqdm(files, desc=f"Downloading files", unit="file")
     ):
         t.set_postfix_str(gh_path)
         with open(file_path, "r+") as f:
-          try:
-            contents = f.read()
-            q_ix = contents.index("## Questions to test your knowledge")
-          except:
-            continue
-          f.truncate(len(contents[:q_ix]))
-          questions.append(
-            contents[q_ix:].lstrip("## Questions to test your knowledge").strip()
-          )
+            try:
+                contents = f.read()
+                q_ix = contents.index("## Questions to test your knowledge")
+            except:
+                continue
+            f.truncate(len(contents[:q_ix]))
+            questions.append(
+                contents[q_ix:].lstrip("## Questions to test your knowledge").strip()
+            )
     print("Download complete: datadriven")
 
     with open(ROOT_DIR / "data/datadriven/questions.md", "w") as f:
         f.write("\n".join(questions))
     print("Questions saved!")
+
+    files = download_gh_folder(
+        "brandonstarxel",
+        "chunking_evaluation",
+        "/chunking_evaluation/evaluation_framework/general_evaluation_data",
+        ROOT_DIR / "data/general_evaluation_data",
+        exclude=["questions_db", "chatlogs.md"],
+    )
+    for file_path, gh_path in (
+        t := tqdm(files, desc=f"Downloading files", unit="file")
+    ):
+        t.set_postfix_str(gh_path)
+    print("Download complete: chunking evaluation dataset")
 
     download_msmarco(ROOT_DIR / "data")
     print("Download complete: MS MARCO")
