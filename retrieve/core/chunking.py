@@ -58,6 +58,9 @@ class Chunk:
             if merged[-1].doc_id == chunk.doc_id and 0 <= overlaps:
                 merged[-1].text += chunk.text[overlaps:]
                 merged[-1].metadata["end_char_idx"] += len(chunk.text) - overlaps
+                merged[-1].metadata["score"] = merged[-1].metadata.get(
+                    "score", 0
+                ) + chunk.metadata.get("score", 0)
             else:
                 merged.append(clone_chunk(chunk))
         return merged

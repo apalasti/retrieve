@@ -19,6 +19,8 @@ def make_batches(iterator: Iterator, batch_size: int):
 
 
 class Embedder(ABC):
+    EMBEDDING_BATCH_SIZE = 500
+
     @abstractmethod
     def get_embedding_dims(self) -> int:
         raise NotImplementedError()
@@ -28,7 +30,7 @@ class Embedder(ABC):
         raise NotImplementedError()
 
     def __call__(self, chunks: Iterator[Chunk]):
-        for batch in make_batches(chunks, 100):
+        for batch in make_batches(chunks, self.EMBEDDING_BATCH_SIZE):
             texts = [chunk.text for chunk in batch]
             embeddings = self.embed_texts(texts)
             for chunk, embedding in zip(batch, embeddings):
