@@ -11,6 +11,8 @@ from retrieve.query_engine import QueryEngine
 ROOT_DIR = Path(__file__).parent.parent
 CORPUS_PATH = ROOT_DIR / "data/msmarco/test_corpus.jsonl"
 
+SEARCH_TYPE = "hybrid"
+
 
 def file_len(fpath):
     with open(fpath, "r") as f:
@@ -67,18 +69,19 @@ def main():
     for query_id, query_text in tqdm(
         queries["text"].items(), desc="Running queries", total=len(queries)
     ):
-        retrieved = query_engine.search(query_text, k=100, type="hybrid")
+        retrieved = query_engine.search(query_text, k=100, type=SEARCH_TYPE)
         retrieved.sort(key=lambda c: c.metadata["score"], reverse=True)
         for top_k in [1, 5, 10, 50]:
+            assert top_k == len(retrieved[:top_k])
             evaluation = query_engine.evaluate_by_relevance(
-                qrels[str(query_id)], retrieved[:top_k], ["recall", "precision"]
+                qrels[str(query_id)], retrieved[:top_k], ["precision", "ndcg"]
             )
             evaluation["query_id"] = query_id
             evaluation["top_k"] = top_k
             evaluations.append(evaluation)
 
     summary = pd.DataFrame(evaluations)
-    print(summary.groupby("top_k")[["recall", "precision"]].describe())
+    print(summary.groupby("top_k")[["precision", "ndcg"]].describe())
 
 
 if __name__ == "__main__":
