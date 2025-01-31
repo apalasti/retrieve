@@ -6,7 +6,7 @@ import numpy as np
 import orjson
 import tiktoken
 
-from .documents import Document
+from retrieve.core.documents import Document
 
 
 @dataclass
@@ -72,15 +72,36 @@ class Chunk:
 
 class Chunker(ABC):
     @abstractmethod
-    def chunk_text(self, piece: Union[Document, Chunk]) -> List[Chunk]:
+    def get_chunk_boundaries(self, text: str) -> List[Tuple[int, int]]:
         raise NotImplementedError()
 
-    def generate_chunks(self, pieces: Iterator[Union[Document, Chunk]]):
-        for piece in pieces:
-            yield from self.chunk_text(piece)
+    def chunk_node(self, node: Union[Document, Chunk]) -> List[Chunk]:
+        text = node.read()
+        if isinstance(node, Document):
+            doc_id = node.id
+            metadata = node.metadata
+        else:
+            doc_id = node.doc_id
+            metadata = node.metadata
 
-    def __call__(self, pieces: Iterator[Union[Document, Chunk]]):
-        return self.generate_chunks(pieces)
+        start_char_idx = metadata.get("start_char_idx", 0)
+        return [
+            Chunk(
+                doc_id,
+                text[start:end],
+                embedding=None,
+                metadata={
+                    **metadata,
+                    "start_char_idx": start_char_idx + start,
+                    "end_char_idx": start_char_idx + end,
+                },
+            )
+            for (start, end) in self.get_chunk_boundaries(text)
+        ]
+
+    def __call__(self, nodes: Iterator[Union[Document, Chunk]]):
+        for node in nodes:
+            yield from self.chunk_node(node)
 
 
 class FixedTokenChunker(Chunker):
@@ -94,42 +115,25 @@ class FixedTokenChunker(Chunker):
         self.max_tokens = max_tokens
         self.overlap = overlap
 
-    def chunk_text(self, piece: Union[Document, Chunk]):
-        text = piece.read()
-        if isinstance(piece, Document):
-            doc_id = piece.id
-            metadata = piece.metadata
-        else:
-            doc_id = piece.doc_id
-            metadata = piece.metadata
+    def get_chunk_boundaries(self, text: str) -> List[Tuple[int, int]]:
+        tokens = self.tokenizer.encode(text, disallowed_special=())
 
-        chunks: List[Chunk] = []
-        token_ids = self.tokenizer.encode(text, disallowed_special=())
+        batches = []
+        for start in range(0, len(tokens), self.max_tokens - self.overlap):
+            non_overlapping = tokens[start : start + self.max_tokens - self.overlap]
+            overlapping = tokens[
+                start + self.max_tokens - self.overlap : start + self.max_tokens
+            ]
+            batches.append(non_overlapping)
+            batches.append(overlapping)
 
-        start_char_idx = metadata.get("start_char_idx", 0)
-        for start in range(0, len(token_ids), self.max_tokens - self.overlap):
-            end = start + self.max_tokens
-            chunk_text = self.tokenizer.decode(token_ids[start:end])
-
-            chunks.append(
-                Chunk(
-                    doc_id,
-                    chunk_text,
-                    embedding=None,
-                    metadata={
-                        **metadata,
-                        "start_char_idx": start_char_idx,
-                        "end_char_idx": start_char_idx + len(chunk_text),
-                    },
-                )
-            )
-
-            non_overlapping = self.tokenizer.decode(
-                token_ids[start : start + self.max_tokens - self.overlap]
-            )
+        parts = self.tokenizer.decode_batch(batches)
+        bounds, start_char_idx = [], 0
+        for non_overlapping, overlapping in zip(parts[::2], parts[1::2]):
+            end_char_idx = start_char_idx + len(non_overlapping) + len(overlapping)
+            bounds.append((start_char_idx, end_char_idx))
             start_char_idx += len(non_overlapping)
-
-        return chunks
+        return bounds
 
 
 if __name__ == "__main__":
@@ -139,13 +143,12 @@ This is the text to perform chunking on.
 Firstly based on the number of tokens.
 """
 
-    chunker = FixedTokenChunker("cl100k_base", max_tokens=5, overlap=0)
-    chunks = chunker.chunk_text(Chunk(doc_id=1, text=text))
+    chunker = FixedTokenChunker("cl100k_base", max_tokens=5, overlap=1)
+    chunks = chunker.chunk_node(Chunk(doc_id=1, text=text))
     print(chunks)
     print([len(chunk.text) for chunk in chunks])
+    print("Bounds: ", chunker.get_chunk_boundaries(text))
 
-    merged = Chunk.merge_chunks(
-        Chunk(doc_id=0, text="This is a chunk", metadata={"start_char_idx": 0, "end_char_idx": 15}),
-        Chunk(doc_id=0, text="is a chunk continuation", metadata={"start_char_idx": 5, "end_char_idx": 28}),
-    )
+    merged = Chunk.merge_chunks(*chunks)
     print(merged)
+    print(merged[0].text)

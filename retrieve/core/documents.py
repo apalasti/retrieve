@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, Generator, Optional
 
+import orjson
+
 
 @dataclass
 class Document:
@@ -111,8 +113,6 @@ class JsonLReader(DocumentReader):
         return doc_count
 
     def iter_documents(self):
-        import orjson
-
         with open(self.file_path, "r") as f:
             for line in f:
                 yield Document(**self.transform(orjson.loads(line)))
