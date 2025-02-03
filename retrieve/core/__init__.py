@@ -1,7 +1,7 @@
 from .chunking import Chunk, Chunker, FixedTokenChunker
 from .documents import (DirectoryReader, Document, DocumentReader,
                         FileDocument, JsonLReader)
-from .embedding import Embedder, STEmbedding
+from .embedding import Embedder, HFEmbedding
 from .vector_db import VectorDB
 
 __all__ = [
@@ -14,6 +14,6 @@ __all__ = [
     "FileDocument",
     "JsonLReader",
     "Embedder",
-    "STEmbedding",
+    "HFEmbedding",
     "VectorDB",
 ]

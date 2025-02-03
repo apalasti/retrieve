@@ -8,7 +8,7 @@ from tqdm import tqdm
 from retrieve.core import (
     VectorDB,
     DirectoryReader,
-    STEmbedding,
+    HFEmbedding,
     Chunk,
     FixedTokenChunker,
 )

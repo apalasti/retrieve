@@ -21,6 +21,9 @@ class LateChunking(Chunker):
         token_offsets = np.array(
             [token_end for _, token_end in tokenization["offset_mapping"]]
         )
+        assert (
+            token_offsets.shape[0] == node.embedding.shape[0]
+        ), f"Number of tokens: {len(token_offsets)} != Number of embeddings: {node.embedding.shape[0]}"
 
         start_offset = node.metadata.get("start_char_idx", 0)
         def char2token(char_idx):

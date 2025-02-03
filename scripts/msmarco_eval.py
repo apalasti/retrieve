@@ -4,7 +4,7 @@ import pandas as pd
 import ranx
 from tqdm import tqdm
 
-from retrieve.core import FixedTokenChunker, JsonLReader, STEmbedding, Embedder, VectorDB
+from retrieve.core import FixedTokenChunker, JsonLReader, HFEmbedding, Embedder, VectorDB
 from retrieve.processing import Indexer
 from retrieve.query_engine import QueryEngine
 
@@ -21,7 +21,7 @@ def file_len(fpath):
 
 def main():
     print("Loading embedding model...")
-    embedder = STEmbedding(
+    embedder = HFEmbedding(
         "sentence-transformers/all-MiniLM-L6-v2",
         model_kwargs={"torch_dtype": "float16"},
     )
