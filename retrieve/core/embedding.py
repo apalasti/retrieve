@@ -81,16 +81,64 @@ class HFEmbedding(Embedder):
         self, texts: List[str], output_value="sentence_embedding", prompt_name=None
     ) -> List[np.ndarray]:
         prompt_name = prompt_name if prompt_name in self._model.prompts else None
-        return list(
-            self._model.encode(
+        if output_value == "sentence_embedding":
+            return list(
+                self._model.encode(
+                    sentences=texts,
+                    batch_size=self.BATCH_SIZE,
+                    normalize_embeddings=True,
+                    convert_to_numpy=True,
+                    output_value=output_value,
+                    prompt_name=prompt_name
+                )
+            )
+
+        return [
+            token_embeddings.cpu().numpy()
+            for token_embeddings in self._model.encode(
                 sentences=texts,
                 batch_size=self.BATCH_SIZE,
-                normalize_embeddings=True,
-                convert_to_numpy=True,
                 output_value=output_value,
-                prompt_name=prompt_name
+                prompt_name=prompt_name,
             )
+        ]
+
+
+class LlamaEmbedding(Embedder):
+    def __init__(self, repo_id: str, file_name: str, tokenizer_id: str, **kwargs):
+        import llama_cpp
+        from transformers import AutoTokenizer 
+
+        self._tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, use_fast=True)
+        self._model = llama_cpp.Llama.from_pretrained(
+            repo_id,
+            file_name,
+            **kwargs,
+            pooling_type=llama_cpp.LLAMA_POOLING_TYPE_NONE,
+            embedding=True
         )
+
+    def get_embedding_dims(self) -> int:
+        return self._model.n_embd()
+
+    def tokenize(self, text: str) -> Dict:
+        return self._tokenizer(
+            text,
+            return_offsets_mapping=True,
+            return_token_type_ids=False,
+            return_attention_mask=False,
+        )
+
+    def embed_texts(self, texts: List[str], output_value="sentence_embedding", prompt_name=None) -> List[np.ndarray]:
+        if output_value == "sentence_embedding":
+            return [
+                np.mean(token_embeddings, axis=0)
+                for token_embeddings in self._model.embed(texts)
+            ]
+
+        return [
+            np.array(token_embeddings) for token_embeddings in self._model.embed(texts)
+        ]
 
 
 if __name__ == "__main__":
