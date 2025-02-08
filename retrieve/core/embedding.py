@@ -109,6 +109,10 @@ class LlamaEmbedding(Embedder):
         import llama_cpp
         from transformers import AutoTokenizer 
 
+        if "n_ctx" in kwargs:
+            kwargs["n_batch"] = kwargs["n_ctx"]
+            kwargs["n_ubatch"] = kwargs["n_ctx"]
+
         self._tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, use_fast=True)
         self._model = llama_cpp.Llama.from_pretrained(
             repo_id,

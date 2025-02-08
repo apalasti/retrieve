@@ -8,13 +8,14 @@ from tqdm import tqdm
 from retrieve.core import (
     VectorDB,
     DirectoryReader,
-    HFEmbedding,
+    LlamaEmbedding,
     Chunk,
     FixedTokenChunker,
 )
-from retrieve.processing import Indexer
+from retrieve.processing import Indexer, LateChunking
 from retrieve.query_engine import QueryEngine
 
+# import logging
 # logging.basicConfig(level=logging.INFO)
 
 ROOT_DIR = Path(__file__).parent.parent
@@ -28,7 +29,7 @@ def evaluate_search(
     top_k=10,
 ):
     results = [
-        query_engine.search(question, top_k, "hybrid")
+        query_engine.search(question, top_k, "vector")
         for question in tqdm(
             questions, desc="Performing searches", total=len(questions)
         )
@@ -44,9 +45,12 @@ def evaluate_search(
 
 def main():
     print("Loading embedding model...")
-    embedding_model = STEmbedding(
-        "sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"torch_dtype": "float16"},
+    embedding_model = LlamaEmbedding(
+        repo_id="narainp/jina-embeddings-GGUF",
+        file_name="jina-embeddings-v2-base-en-q8_0.gguf",
+        tokenizer_id="jinaai/jina-embeddings-v2-base-en",
+        n_ctx = 2400,
+        verbose=False
     )
 
     print("Loading database...")
@@ -59,8 +63,8 @@ def main():
     indexer = Indexer(
         db,
         transformations=[
-            FixedTokenChunker(max_tokens=250, overlap=125),
-            embedding_model,
+            FixedTokenChunker(max_tokens=2000, overlap=200),
+            LateChunking(FixedTokenChunker(max_tokens=250, overlap=0), embedding_model),
         ],
     )
     indexer.process_reader(corpus_reader, show_progress=True)

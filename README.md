@@ -16,10 +16,6 @@ PYTHONPATH=. python scripts/msmarco_eval.py
 PYTHONPATH=. python scripts/general_data_eval.py 
 ```
 
-All benchmarks were conducted using the
-[sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
-embedding model.
-
 ### MSMARCO 1M dataset
 
 This dataset is derived from the original
@@ -34,6 +30,11 @@ python scripts/process_msmarco.py
 
 The metrics shown in the following table are calculated as described by the
 [ranx documentation](https://amenra.github.io/ranx/metrics/). 
+
+All benchmarks were conducted using the
+[sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
+embedding model.
+
 
 | Method | Precision@5 | nDCG@5 |
 |:-|-:|-:|
@@ -67,15 +68,18 @@ well it is a valuable resource for evaluation purposes.
 | BM25 | **0.73 (± 0.43)** | **0.07 (± 0.06)** | **0.07 (± 0.06)** |
 | Vector Search | 0.62 (± 0.46) | 0.06 (± 0.06) | 0.06 (± 0.06) |
 | Hybrid Search (bm25 + vector) | 0.72 (± 0.43) | 0.06 (± 0.06) | 0.06 (± 0.06) |
+| Late Chunking (jina-embeddings-v2-en) | 0.52 (± 0.48) | 0.05 (± 0.06) | 0.05 (± 0.03) |
 
 | Method | Recall@5 | Precision@5 | IoU@5 |
 |:-|-:|-:|-:|
 | BM25 | **0.79 (± 0.39)** | **0.05 (± 0.04)** | **0.05 (± 0.04)** |
 | Vector Search | 0.70 (± 0.44) | 0.04 (± 0.04) | 0.04 (± 0.04) |
 | Hybrid Search (bm25 + vector) | 0.78 (± 0.40) | 0.05 (± 0.04) | 0.04 (± 0.04) |
+| Late Chunking (jina-embeddings-v2-en) | 0.63 (± 0.46) | 0.03 (± 0.04) | 0.03 (± 0.04) |
 
 | Method | Recall@10 | Precision@10 | IoU@10 |
 |:-|-:|-:|-:|
 | BM25 | **0.83 (± 0.36)** | **0.03 (± 0.02)** | **0.03 (± 0.02)** |
 | Vector Search | 0.77 (± 0.41) | 0.02 (± 0.02) | 0.02 (± 0.02) |
 | Hybrid Search (bm25 + vector) | 0.83 (± 0.36) | 0.03 (± 0.02) | 0.03 (± 0.02) |
+| Late Chunking (jina-embeddings-v2-en) | 0.73 (± 0.43) | 0.02 (± 0.02) | 0.02 (± 0.02) |
