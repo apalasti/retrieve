@@ -33,7 +33,9 @@ class LateChunking(Chunker):
         for chunk in chunks:
             start = char2token(chunk.metadata["start_char_idx"])
             end = char2token(chunk.metadata["end_char_idx"])
-            embedding = np.array(node.embedding[start:end].cpu(), dtype=np.float32).mean(axis=0)
+
+            assert 0 < node.embedding[start:end].shape[0]
+            embedding = node.embedding[start:end].mean(axis=0)
             chunk.embedding = embedding / np.linalg.norm(embedding)
         return chunks
 
