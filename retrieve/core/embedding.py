@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterator, List, Dict
+from typing import Iterator, List, Dict, Optional
 
 import numpy as np
 
@@ -105,15 +105,23 @@ class HFEmbedding(Embedder):
 
 
 class LlamaEmbedding(Embedder):
-    def __init__(self, repo_id: str, file_name: str, tokenizer_id: str, **kwargs):
+    def __init__(
+        self, repo_id: str, file_name: str, tokenizer_id: Optional[str] = None, **kwargs
+    ):
         import llama_cpp
         from transformers import AutoTokenizer 
 
+        kwargs.setdefault("verbose", False)
         if "n_ctx" in kwargs:
             kwargs["n_batch"] = kwargs["n_ctx"]
             kwargs["n_ubatch"] = kwargs["n_ctx"]
 
-        self._tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, use_fast=True)
+        self._tokenizer = (
+            AutoTokenizer.from_pretrained(tokenizer_id, use_fast=True)
+            if tokenizer_id
+            else None
+        )
+
         self._model = llama_cpp.Llama.from_pretrained(
             repo_id,
             file_name,
@@ -126,6 +134,11 @@ class LlamaEmbedding(Embedder):
         return self._model.n_embd()
 
     def tokenize(self, text: str) -> Dict:
+        if self._tokenizer is None:
+            raise ValueError(
+                "This LlamaEmbedding model was initialized without a tokenizer. Please provide a `tokenizer_id` during initialization if you want to use the `tokenize` method."
+            )
+
         return self._tokenizer(
             text,
             return_offsets_mapping=True,

@@ -107,9 +107,9 @@ class Chunker(ABC):
 class FixedTokenChunker(Chunker):
     def __init__(
         self,
-        encoding_name: str = "cl100k_base",
-        max_tokens: int = 250,
+        max_tokens: int,
         overlap: int = 0,
+        encoding_name: str = "cl100k_base",
     ) -> None:
         self.tokenizer = tiktoken.get_encoding(encoding_name)
         self.max_tokens = max_tokens
@@ -143,7 +143,7 @@ This is the text to perform chunking on.
 Firstly based on the number of tokens.
 """
 
-    chunker = FixedTokenChunker("cl100k_base", max_tokens=5, overlap=1)
+    chunker = FixedTokenChunker(max_tokens=5, overlap=1)
     chunks = chunker.chunk_node(Chunk(doc_id=1, text=text))
     print(chunks)
     print([len(chunk.text) for chunk in chunks])
