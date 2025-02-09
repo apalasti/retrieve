@@ -1,6 +1,8 @@
 # Local Retrival MCP
 
 TODO: Description of what this project is.
+TODO: Speed up reranking somehow beause it's really slow to use an LLM as a
+reranker, explore if there are better options. 
 
 
 ## Benchmarks
@@ -40,19 +42,22 @@ embedding model.
 |:-|-:|-:|
 | BM25 | 0.54 (± 0.29) | 0.11 (± 0.09) |
 | Vector Search | 0.67 (± 0.26) | 0.14 (± 0.10) |
-| Hybrid Search (bm25 + vector) | **0.76 (± 0.25)** | **0.18 (± 0.16)** |
+| Hybrid Search (bm25 + vector) | 0.76 (± 0.25) | 0.18 (± 0.16) |
+| Hybrid Search (reranking from 100 results with LBReranker) | **0.87 (± 0.25)** | **0.23 (± 0.18)** |
 
 | Method | Precision@10 | nDCG@10 |
 |:-|-:|-:|
 | BM25 | 0.57 (± 0.28) | 0.18 (± 0.13) |
 | Vector Search | 0.70 (± 0.25) | 0.22 (± 0.13) |
-| Hybrid Search (bm25 + vector) | **0.72 (± 0.24)** | **0.25 (± 0.18)** |
+| Hybrid Search (bm25 + vector) | 0.72 (± 0.24) | 0.25 (± 0.18) |
+| Hybrid Search (reranking from 100 results with LBReranker) | **0.85 (± 0.22)** | **0.33 (± 0.21)** |
 
 | Method | Precision@50 | nDCG@50 |
 |:-|-:|-:|
 | BM25 | 0.47 (± 0.27) | 0.37 (± 0.18) |
 | Vector Search | 0.56 (± 0.29) | 0.46 (± 0.20) |
-| Hybrid Search (bm25 + vector) | **0.55 (± 0.25)** | **0.48 (± 0.21)** |
+| Hybrid Search (bm25 + vector) | 0.55 (± 0.25) | 0.48 (± 0.21) |
+| Hybrid Search (reranking from 100 results with LBReranker) | **0.63 (± 0.27)** | **0.58 (± 0.23)** |
 
 
 ### Chunking Evaluation dataset

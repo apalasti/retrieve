@@ -1,12 +1,12 @@
 from pathlib import Path
 
 import pandas as pd
-import ranx
 from tqdm import tqdm
 
-from retrieve.core import FixedTokenChunker, JsonLReader, HFEmbedding, Embedder, VectorDB
+from retrieve.core import FixedTokenChunker, JsonLReader, LlamaEmbedding, Embedder, VectorDB
 from retrieve.processing import Indexer
 from retrieve.query_engine import QueryEngine
+from retrieve.reranking import LBReranker
 
 ROOT_DIR = Path(__file__).parent.parent
 CORPUS_PATH = ROOT_DIR / "data/msmarco/test_corpus.jsonl"
@@ -21,9 +21,9 @@ def file_len(fpath):
 
 def main():
     print("Loading embedding model...")
-    embedder = HFEmbedding(
-        "sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"torch_dtype": "float16"},
+    embedder = LlamaEmbedding(
+        repo_id="second-state/All-MiniLM-L6-v2-Embedding-GGUF",
+        file_name="all-MiniLM-L6-v2-Q8_0.gguf"
     )
 
     print("Loading database...")
@@ -49,7 +49,7 @@ def main():
         indexer.process_reader(corpus_reader, show_progress=True)
 
     print(f"Number of embeddings in vector store: {db.num_chunks()}")
-    query_engine = QueryEngine(db, embedder)
+    query_engine = QueryEngine(db, embedder, LBReranker(n_ctx=1000))
 
     qd_pairs = pd.read_csv(ROOT_DIR / "data/msmarco/qrels/test.tsv", sep="\t")
     qd_pairs.set_index("query-id", inplace=True)
