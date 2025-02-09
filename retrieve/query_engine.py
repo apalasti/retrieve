@@ -1,8 +1,9 @@
-from typing import List, Literal, Dict
+from typing import List, Literal, Dict, Optional
 
 import ranx
 
 from .core import Chunk, Embedder, VectorDB
+from .reranking import Reranker
 
 
 def sum_of_ranges(*ranges):
@@ -27,9 +28,15 @@ def intersect_ranges(range1, range2):
 
 class QueryEngine:
 
-    def __init__(self, db: VectorDB, embedding_model: Embedder) -> None:
+    def __init__(
+        self,
+        db: VectorDB,
+        embedding_model: Embedder,
+        reranker: Optional[Reranker] = None,
+    ) -> None:
         self._db = db
         self._embedding_model = embedding_model
+        self._reranker = reranker
 
     def search(self, query_text: str, k=10, type: Literal["fts", "vector", "hybrid"] = "hybrid") -> List[Chunk]:
         if type == "fts":
@@ -58,7 +65,10 @@ class QueryEngine:
             elif "_distance" in chunk_dict:
                 chunk.metadata["score"] = 1 - chunk_dict["_distance"]
             search_results.append(chunk)
-        return Chunk.merge_chunks(*search_results)
+        search_results = Chunk.merge_chunks(*search_results)
+        if self._reranker:
+            self._reranker.rerank(query_text, search_results)
+        return search_results
 
     @staticmethod
     def evaluate_by_overlaps(references: List[Chunk], retrieved: List[Chunk]):
